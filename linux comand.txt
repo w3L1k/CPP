@@ -18,5 +18,5 @@ chmod 755 НАЗВАНИЕ — изменить права доступа к д�
 chown пользователь:групп а НАЗВАНИЕ — изменить владельца директории.
 
 
-clang-format -i taskJ.cpp
-clang-tidy -fix taskJ.cpp
+clang-format -i taskE.cpp
+clang-tidy -fix taskE.cpp

@@ -4,10 +4,10 @@ void Reverse(int n) {
   if (n == 0) {
     return;
   }
-  int x = 0;
-  std::cin >> x;
+  int currentnumber = 0;
+  std::cin >> currentnumber;
   Reverse(n - 1);
-  std::cout << x << " ";
+  std::cout << currentnumber << " ";
 }
 int main() {
   int n = 0;

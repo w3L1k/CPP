@@ -7,11 +7,11 @@ double Power(double a, int b) {
   if (b < 0) {
     return 0;
   }
-  double half = Power(a, b / 2);
+  double с = Power(a, b / 2);
   if (b % 2 == 0) {
-    return half * half;
+    return с * с;
   }
-  return half * half * a;
+  return с * с * a;
 }
 int main() {
   double a = 0;

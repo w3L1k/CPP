@@ -1,24 +1,29 @@
 #include <iostream>
+#include <vector>
 
-bool IsPrime(int n) {
-  if (n <= 1) {
-    return false;
-  }
-  for (int i = 2; i * i <= n; ++i) {
-    if (n % i == 0) {
-      return false;
+void PrintPrime(int a, int b) {
+  std::vector<bool> isprime(b + 1, true);
+  isprime[0] = isprime[1] = false;
+
+  for (int i = 2; i * i <= b; ++i) {
+    if (isprime[i]) {
+      for (int j = i * i; j <= b; j += i) {
+        isprime[j] = false;
+      }
     }
   }
-  return true;
+
+  for (int i = a; i <= b; ++i) {
+    if (isprime[i]) {
+      std::cout << i << std::endl;
+    }
+  }
 }
+
 int main() {
-  int n = 0;
-  int t = 0;
-  std::cin >> n >> t;
-  for (int i = n; i <= t; ++i) {
-    if (IsPrime(i)) {
-      std::cout << i << "\n";
-    }
-  }
+  int a = 0;
+  int b = 0;
+  std::cin >> a >> b;
+  PrintPrime(a, b);
   return 0;
 }

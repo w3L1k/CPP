@@ -24,10 +24,13 @@ int main() {
       for (int inner = 0; inner < 3; ++inner) {
         c[row][col] += a[row][inner] * b[inner][col];
       }
-      std::cout << c[row][col] << " ";
+    }
+  }
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
+      std::cout << c[i][j] << " ";
     }
     std::cout << "\n";
   }
-
   return 0;
 }

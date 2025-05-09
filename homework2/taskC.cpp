@@ -1,8 +1,8 @@
 #include <iostream>
 
 int main() {
-  const int a = 10000;
-  int nums[a];
+  const int maxsize = 10000;
+  int nums[maxsize];
   int n = 0;
   std::cin >> n;
   for (int i = 0; i < n; ++i) {

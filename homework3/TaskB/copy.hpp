@@ -1,7 +1,7 @@
 #pragma once
 
-template <typename input, typename output>
-output Copy(input src_begin, input src_end, output dest) {
+template <typename Input, typename Output>
+Output Copy(Input src_begin, Input src_end, Output dest) {
   while (src_begin != src_end) {
     *dest = *src_begin;
     ++src_begin;
@@ -10,8 +10,8 @@ output Copy(input src_begin, input src_end, output dest) {
   return dest;
 }
 
-template <typename input, typename output>
-output CopyBackward(input src_begin, input src_end, output dest_end) {
+template <typename Input, typename Output>
+Output CopyBackward(Input src_begin, Input src_end, Output dest_end) {
   while (src_end != src_begin) {
     --src_end;
     --dest_end;
