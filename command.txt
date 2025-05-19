@@ -24,5 +24,9 @@ clang-tidy -fix taskJ.cpp
 
 git status
 git add .
-git commit -m "HW5"
+git commit -m "БДЗ 1.2"
 git push origin main
+
+
+./"название собранного файла с тестов и файла" "НАЗВАНИЕ ТЕСТА"     проверка на один тест
+./"название собранного файла с тестов и файла" проверка на все тесты
