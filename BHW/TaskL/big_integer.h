@@ -1,62 +1,85 @@
-#pragma once
+#ifndef BIG_INTEGER_H
+#define BIG_INTEGER_H
+
+#include <vector>
+#include <string>
+#include <iostream>
 #include <stdexcept>
 #include <cstdint>
-#include <string>
-#include <stdexcept>
-#include <iostream>
 
 class BigIntegerOverflow : public std::runtime_error {
  public:
-  BigIntegerOverflow() : std::runtime_error("BigIntegerOverflow") {
-  }
+  BigIntegerOverflow() : std::runtime_error("BigIntegerOverflow") {}
 };
 
 class BigIntegerDivisionByZero : public std::runtime_error {
  public:
-  BigIntegerDivisionByZero() : std::runtime_error("BigIntegerDivisionByZero") {
-  }
+  BigIntegerDivisionByZero() : std::runtime_error("BigIntegerDivisionByZero") {}
 };
 
 class BigInteger {
-  public:
-    BigInteger();
-    BigInteger(uint64_t value);
-    explicit BigInteger(const char* str);
-    bool IsNegative() const;
+ public:
+  BigInteger();
+  BigInteger(int value);
+  BigInteger(long long value);
+  BigInteger(const char* str);
+  BigInteger(const std::string& str);
 
-    BigInteger operator+() const;
-    BigInteger operator-() const;
+  bool IsNegative() const;
 
-    BigInteger& operator+=(const BigInteger& rhs);
-    BigInteger& operator-=(const BigInteger& rhs);
-    BigInteger& operator*=(const BigInteger& rhs);
+  BigInteger operator+() const;
+  BigInteger operator-() const;
 
-    BigInteger operator+(const BigInteger& rhs) const;
-    BigInteger operator-(const BigInteger& rhs) const;
-    BigInteger operator*(const BigInteger& rhs) const;
+  BigInteger& operator+=(const BigInteger& other);
+  BigInteger& operator-=(const BigInteger& other);
+  BigInteger& operator*=(const BigInteger& other);
 
-    BigInteger& operator++();
-    BigInteger operator++(int);
-    BigInteger& operator--();
-    BigInteger operator--(int);
+  BigInteger& operator+=(int other);
+  BigInteger& operator-=(int other);
+  BigInteger& operator*=(int other);
 
-    explicit operator bool() const;
+  BigInteger& operator++();
+  BigInteger operator++(int);
+  BigInteger& operator--();
+  BigInteger operator--(int);
 
-    friend bool operator==(const BigInteger& a, const BigInteger& b);
-    friend bool operator!=(const BigInteger& a, const BigInteger& b);
-    friend bool operator<(const BigInteger& a, const BigInteger& b);
-    friend bool operator>(const BigInteger& a, const BigInteger& b);
-    friend bool operator<=(const BigInteger& a, const BigInteger& b);
-    friend bool operator>=(const BigInteger& a, const BigInteger& b);
+  explicit operator bool() const;
 
-    friend std::ostream& operator<<(std::ostream& out, const BigInteger& val);
-    friend std::istream& operator>>(std::istream& in, BigInteger& val);
-  private:
-    static const uint64_t BASE = 1000000000;
-    static const int BASE_DIGITS = 9;
-    std::vector<uint32_t> digits_;
-    bool is_negative_;
+  friend bool operator==(const BigInteger& lhs, const BigInteger& rhs);
+  friend bool operator!=(const BigInteger& lhs, const BigInteger& rhs);
+  friend bool operator<(const BigInteger& lhs, const BigInteger& rhs);
+  friend bool operator<=(const BigInteger& lhs, const BigInteger& rhs);
+  friend bool operator>(const BigInteger& lhs, const BigInteger& rhs);
+  friend bool operator>=(const BigInteger& lhs, const BigInteger& rhs);
 
-    void RemoveLeadingZeros();
-    int CompareMagnitude(const BigInteger& other) const;
+  friend std::ostream& operator<<(std::ostream& out, const BigInteger& value);
+  friend std::istream& operator>>(std::istream& in, BigInteger& value);
+
+ private:
+  using DigitType = uint16_t;
+  using DoubleDigitType = uint32_t;
+
+  static const int BASE;
+  static const int BASE_DIGITS;
+  static const int MAX_DECIMAL_DIGITS;
+
+  std::vector<DigitType> digits_;
+  bool is_negative_ = false;
+
+  void RemoveLeadingZeros();
+  int DecimalDigitCount() const;
+
+  int CompareAbs(const BigInteger& other) const;
+  BigInteger AddUnsigned(const BigInteger& other) const;
+  BigInteger SubtractUnsigned(const BigInteger& other) const;
 };
+
+BigInteger operator+(BigInteger lhs, const BigInteger& rhs);
+BigInteger operator-(BigInteger lhs, const BigInteger& rhs);
+BigInteger operator*(BigInteger lhs, const BigInteger& rhs);
+
+BigInteger operator+(BigInteger lhs, int rhs);
+BigInteger operator-(BigInteger lhs, int rhs);
+BigInteger operator*(BigInteger lhs, int rhs);
+
+#endif // BIG_INTEGER_H
