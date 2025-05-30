@@ -1,31 +1,47 @@
-#ifndef BIG_INTEGER_H
-#define BIG_INTEGER_H
+#pragma once
 
+#include <iostream>
 #include <vector>
 #include <string>
-#include <iostream>
 #include <stdexcept>
+#include <iomanip>
+#include <algorithm>
+#include <stdexcept>
+#include <cmath>
 #include <cstdint>
 
 class BigIntegerOverflow : public std::runtime_error {
  public:
-  BigIntegerOverflow() : std::runtime_error("BigIntegerOverflow") {}
+  BigIntegerOverflow() : std::runtime_error("BigInteger overflow") {
+  }
 };
 
 class BigIntegerDivisionByZero : public std::runtime_error {
  public:
-  BigIntegerDivisionByZero() : std::runtime_error("BigIntegerDivisionByZero") {}
+  BigIntegerDivisionByZero() : std::runtime_error("Division by zero") {
+  }
 };
 
 class BigInteger {
+ private:
+  std::vector<int> digits_;
+  bool is_negative_;
+
+  static const int kBASE = 10000;
+  static const int kBaseDigits = 4;
+
  public:
   BigInteger();
-  BigInteger(int value);
-  BigInteger(long long value);
-  BigInteger(const char* str);
-  BigInteger(const std::string& str);
+  BigInteger(int value);      // NOLINT
+  BigInteger(int64_t value);  // NOLINT
+  explicit BigInteger(const char* value);
+  explicit BigInteger(const std::string& value);
+
+  BigInteger(const BigInteger& other) = default;
+  BigInteger(BigInteger&& other) noexcept;
 
   bool IsNegative() const;
+  BigInteger Abs() const;
 
   BigInteger operator+() const;
   BigInteger operator-() const;
@@ -34,9 +50,14 @@ class BigInteger {
   BigInteger& operator-=(const BigInteger& other);
   BigInteger& operator*=(const BigInteger& other);
 
-  BigInteger& operator+=(int other);
-  BigInteger& operator-=(int other);
-  BigInteger& operator*=(int other);
+  BigInteger& operator=(int value);
+  BigInteger& operator=(const BigInteger& other);
+  BigInteger& operator=(BigInteger&& other) noexcept;
+
+  friend BigInteger operator+(BigInteger lhs, const BigInteger& rhs);
+  friend BigInteger operator-(BigInteger lhs, const BigInteger& rhs);
+  friend BigInteger operator*(BigInteger lhs, const BigInteger& rhs);
+
 
   BigInteger& operator++();
   BigInteger operator++(int);
@@ -52,34 +73,11 @@ class BigInteger {
   friend bool operator>(const BigInteger& lhs, const BigInteger& rhs);
   friend bool operator>=(const BigInteger& lhs, const BigInteger& rhs);
 
-  friend std::ostream& operator<<(std::ostream& out, const BigInteger& value);
-  friend std::istream& operator>>(std::istream& in, BigInteger& value);
+  friend std::ostream& operator<<(std::ostream& os, const BigInteger& value);
+  friend std::istream& operator>>(std::istream& is, BigInteger& value);
 
  private:
-  using DigitType = uint16_t;
-  using DoubleDigitType = uint32_t;
-
-  static const int BASE;
-  static const int BASE_DIGITS;
-  static const int MAX_DECIMAL_DIGITS;
-
-  std::vector<DigitType> digits_;
-  bool is_negative_ = false;
-
-  void RemoveLeadingZeros();
-  int DecimalDigitCount() const;
-
-  int CompareAbs(const BigInteger& other) const;
-  BigInteger AddUnsigned(const BigInteger& other) const;
-  BigInteger SubtractUnsigned(const BigInteger& other) const;
+  void Trim();
+  void FromString(const std::string& value);
+  size_t DigitCount() const;
 };
-
-BigInteger operator+(BigInteger lhs, const BigInteger& rhs);
-BigInteger operator-(BigInteger lhs, const BigInteger& rhs);
-BigInteger operator*(BigInteger lhs, const BigInteger& rhs);
-
-BigInteger operator+(BigInteger lhs, int rhs);
-BigInteger operator-(BigInteger lhs, int rhs);
-BigInteger operator*(BigInteger lhs, int rhs);
-
-#endif // BIG_INTEGER_H

@@ -1,275 +1,324 @@
-#include "big_integer.h"
-#include <algorithm>
-#include <iomanip>
-#include <sstream>
-#include <cmath>
+#include"big_integer.h"
 
-// Определения статических членов
-const int BigInteger::BASE = 10000;
-const int BigInteger::BASE_DIGITS = 4;
-const int BigInteger::MAX_DECIMAL_DIGITS = 30000;
-
-
-void BigInteger::RemoveLeadingZeros() {
-    while (!digits_.empty() && digits_.back() == 0)
-        digits_.pop_back();
-    if (digits_.empty())
-        is_negative_ = false;
+BigInteger::BigInteger() : is_negative_(false) {
 }
-
-int BigInteger::DecimalDigitCount() const {
-    if (digits_.empty()) return 1;
-    int digits = (digits_.size() - 1) * BASE_DIGITS;
-    int last = digits_.back();
-    while (last) {
-        digits++;
-        last /= 10;
-    }
-    return digits;
-}
-
-void CheckOverflow(const BigInteger& a) {
-    if (a.DecimalDigitCount() > BigInteger::MAX_DECIMAL_DIGITS + 9)
-      throw BigIntegerOverflow{};
-}
-
-BigInteger::BigInteger() : digits_{0}, is_negative_(false) {}
 
 BigInteger::BigInteger(int value) : is_negative_(value < 0) {
-    value = std::abs(value);
-    while (value) {
-        digits_.push_back(value % BASE);
-        value /= BASE;
+  if (value != 0){
+    if (value < 0) {
+      value = -value;
     }
-    if (digits_.empty()) digits_.push_back(0);
+    while (value > 0) {
+      digits_.push_back(value % kBASE);
+      value /= kBASE;
+    }
+  }
 }
 
-BigInteger::BigInteger(long long value) : is_negative_(value < 0) {
-    value = std::abs(value);
-    while (value) {
-        digits_.push_back(static_cast<DigitType>(value % BASE));
-        value /= BASE;
+BigInteger::BigInteger(int64_t value) : is_negative_(value < 0) {
+  if (value != 0) {
+    if (value < 0) {
+      value = -value;
     }
-    if (digits_.empty()) digits_.push_back(0);
+    while (value > 0) {
+      int digit = static_cast<int>(value % kBASE);
+      digits_.push_back(digit);
+      value /= kBASE;
+    }
+  }
 }
 
-BigInteger::BigInteger(const char* str) : BigInteger(std::string(str)) {}
+BigInteger::BigInteger(const char* value) {
+  FromString(value);
+}
 
-BigInteger::BigInteger(const std::string& str) {
-    is_negative_ = false;
-    digits_.clear();
-    std::string s = str;
-    if (s.empty()) {
-        digits_ = {0};
-        return;
-    }
-    if (s[0] == '-') {
-        is_negative_ = true;
-        s = s.substr(1);
-    }
-    for (int i = static_cast<int>(s.length()); i > 0; i -= BASE_DIGITS) {
-        int end = i;
-        int start = std::max(0, end - BASE_DIGITS);
-        int chunk = std::stoi(s.substr(start, end - start));
-        digits_.push_back(static_cast<DigitType>(chunk));
-    }
-    RemoveLeadingZeros();
+BigInteger::BigInteger(const std::string& value) {
+  FromString(value);
+}
+
+BigInteger::BigInteger(BigInteger&& other) noexcept
+    : digits_(std::move(other.digits_)), is_negative_(other.is_negative_) {
+  other.is_negative_ = false;
 }
 
 bool BigInteger::IsNegative() const {
-    return is_negative_;
+  return is_negative_;
+}
+
+BigInteger BigInteger::Abs() const {
+  BigInteger result = *this;
+  result.is_negative_ = false;
+  return result;
 }
 
 BigInteger BigInteger::operator+() const {
-    return *this;
+  return *this;
 }
 
 BigInteger BigInteger::operator-() const {
-    BigInteger res = *this;
-    if (*this != 0)
-        res.is_negative_ = !res.is_negative_;
-    return res;
-}
-
-int BigInteger::CompareAbs(const BigInteger& other) const {
-    if (digits_.size() != other.digits_.size())
-        return digits_.size() < other.digits_.size() ? -1 : 1;
-    for (int i = static_cast<int>(digits_.size()) - 1; i >= 0; --i) {
-        if (digits_[i] != other.digits_[i])
-            return digits_[i] < other.digits_[i] ? -1 : 1;
-    }
-    return 0;
-}
-
-BigInteger BigInteger::AddUnsigned(const BigInteger& other) const {
-    BigInteger result;
-    result.digits_.clear();
-    DoubleDigitType carry = 0;
-    size_t n = std::max(digits_.size(), other.digits_.size());
-    for (size_t i = 0; i < n || carry; ++i) {
-        DoubleDigitType sum = carry;
-        if (i < digits_.size()) sum += digits_[i];
-        if (i < other.digits_.size()) sum += other.digits_[i];
-        result.digits_.push_back(static_cast<DigitType>(sum % BASE));
-        carry = sum / BASE;
-    }
-    result.RemoveLeadingZeros();
-    return result;
-}
-
-BigInteger BigInteger::SubtractUnsigned(const BigInteger& other) const {
-    BigInteger result;
-    result.digits_.clear();
-    DoubleDigitType carry = 0;
-    for (size_t i = 0; i < digits_.size(); ++i) {
-        DoubleDigitType sub = digits_[i] - carry;
-        if (i < other.digits_.size())
-            sub -= other.digits_[i];
-        if (sub >= 0) {
-            result.digits_.push_back(static_cast<DigitType>(sub));
-            carry = 0;
-        } else {
-            result.digits_.push_back(static_cast<DigitType>(sub + BASE));
-            carry = 1;
-        }
-    }
-    result.RemoveLeadingZeros();
-    return result;
+  BigInteger result = *this;
+  result.is_negative_ = !is_negative_;
+  return result;
 }
 
 BigInteger& BigInteger::operator+=(const BigInteger& other) {
-    if (is_negative_ == other.is_negative_) {
-        *this = this->AddUnsigned(other);
-        is_negative_ = other.is_negative_;
-    } else {
-        if (this->CompareAbs(other) >= 0) {
-            *this = this->SubtractUnsigned(other);
-        } else {
-            *this = other.SubtractUnsigned(*this);
-            is_negative_ = other.is_negative_;
-        }
+  if (is_negative_ == other.is_negative_) {
+    int carry = 0;
+    for (size_t i = 0; i < std::max(digits_.size(), other.digits_.size()) || carry; ++i) {
+      if (i == digits_.size()) {
+        digits_.push_back(0);
+      }
+      if (i < other.digits_.size()) {
+        digits_[i] += carry + other.digits_[i];
+      } else {
+        digits_[i] += carry;
+      }
+      carry = digits_[i] >= kBASE;
+      if (carry) {
+        digits_[i] -= kBASE;
+      }
+      if (digits_[i] < 0 || digits_[i] >= kBASE) {
+        throw BigIntegerOverflow();
+      }
     }
-    CheckOverflow(*this);
-    return *this;
+  } else {
+    *this -= -other;
+  }
+  Trim();
+  return *this;
 }
 
 BigInteger& BigInteger::operator-=(const BigInteger& other) {
-    *this += (-other);
-    return *this;
+  if (is_negative_ == other.is_negative_) {
+    if (Abs() >= other.Abs()) {
+      int carry = 0;
+      for (size_t i = 0; i < other.digits_.size() || carry; ++i) {
+        if (i == digits_.size()) {
+          digits_.push_back(0);
+        }
+        if (i < other.digits_.size()) {
+          digits_[i] -= carry + other.digits_[i];
+        } else {
+          digits_[i] -= carry;
+        }
+        carry = digits_[i] < 0;
+        if (carry) {
+          digits_[i] += kBASE;
+        }
+        if (digits_[i] < 0 || digits_[i] >= kBASE) {
+          throw BigIntegerOverflow();
+        }
+      }
+      Trim();
+    } else {
+      *this = -(other - *this);
+    }
+  } else {
+    *this += -other;
+  }
+  return *this;
 }
 
 BigInteger& BigInteger::operator*=(const BigInteger& other) {
-    BigInteger result;
-    result.digits_.assign(digits_.size() + other.digits_.size(), 0);
-    for (size_t i = 0; i < digits_.size(); ++i) {
-        DoubleDigitType carry = 0;
-        for (size_t j = 0; j < other.digits_.size() || carry; ++j) {
-            DoubleDigitType prod = result.digits_[i + j] +
-                static_cast<DoubleDigitType>(digits_[i]) * (j < other.digits_.size() ? other.digits_[j] : 0) + carry;
-            result.digits_[i + j] = static_cast<DigitType>(prod % BASE);
-            carry = prod / BASE;
-        }
+  std::vector<uint64_t> result(digits_.size() + other.digits_.size(), 0);
+  for (size_t i = 0; i < digits_.size(); ++i) {
+    for (size_t j = 0; j < other.digits_.size(); ++j) {
+      uint64_t product = static_cast<uint64_t>(digits_[i]) * other.digits_[j];
+      if (product >= static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+        throw BigIntegerOverflow();
+      }
+      result[i + j] += product;
+      if (result[i + j] >= kBASE) {
+        result[i + j + 1] += result[i + j] / kBASE;
+        result[i + j] %= kBASE;
+      }
     }
-    result.is_negative_ = is_negative_ != other.is_negative_;
-    result.RemoveLeadingZeros();
-    CheckOverflow(result);
-    return *this = result;
-}
+  }
 
-BigInteger& BigInteger::operator+=(int other) {
-    return *this += BigInteger(other);
-}
-BigInteger& BigInteger::operator-=(int other) {
-    return *this -= BigInteger(other);
-}
-BigInteger& BigInteger::operator*=(int other) {
-    return *this *= BigInteger(other);
-}
+  digits_ = std::vector<int>(result.begin(), result.end());
+  is_negative_ = is_negative_ != other.is_negative_;
 
-BigInteger& BigInteger::operator++() {
-    return *this += 1;
-}
-BigInteger BigInteger::operator++(int) {
-    BigInteger temp = *this;
-    ++(*this);
-    return temp;
-}
-BigInteger& BigInteger::operator--() {
-    return *this -= 1;
-}
-BigInteger BigInteger::operator--(int) {
-    BigInteger temp = *this;
-    --(*this);
-    return temp;
-}
-
-BigInteger::operator bool() const {
-    return !digits_.empty() && !(digits_.size() == 1 && digits_[0] == 0);
-}
-
-bool operator==(const BigInteger& a, const BigInteger& b) {
-    return a.is_negative_ == b.is_negative_ && a.digits_ == b.digits_;
-}
-bool operator!=(const BigInteger& a, const BigInteger& b) {
-    return !(a == b);
-}
-bool operator<(const BigInteger& a, const BigInteger& b) {
-    if (a.is_negative_ != b.is_negative_)
-        return a.is_negative_;
-    int cmp = a.CompareAbs(b);
-    return a.is_negative_ ? cmp > 0 : cmp < 0;
-}
-bool operator>(const BigInteger& a, const BigInteger& b) {
-    return b < a;
-}
-bool operator<=(const BigInteger& a, const BigInteger& b) {
-    return !(b < a);
-}
-bool operator>=(const BigInteger& a, const BigInteger& b) {
-    return !(a < b);
-}
-
-std::ostream& operator<<(std::ostream& out, const BigInteger& value) {
-    if (value.IsNegative() && value)
-        out << '-';
-    if (value.digits_.empty()) {
-        out << "0";
-        return out;
+  for (size_t i = 0; i < digits_.size(); ++i) {
+    if (digits_[i] < 0 || digits_[i] >= kBASE) {
+      throw BigIntegerOverflow();
     }
-    out << value.digits_.back();
-    for (int i = static_cast<int>(value.digits_.size()) - 2; i >= 0; --i)
-        out << std::setw(BigInteger::BASE_DIGITS) << std::setfill('0') << value.digits_[i];
-    return out;
+  }
+
+  Trim();
+
+  if (DigitCount() > 30009) {
+    throw BigIntegerOverflow();
+  }
+  return *this;
 }
 
-std::istream& operator>>(std::istream& in, BigInteger& value) {
-    std::string s;
-    in >> s;
-    value = BigInteger(s);
-    return in;
+
+
+
+BigInteger& BigInteger::operator=(int value) {
+  *this = BigInteger(value);
+  return *this;
+}
+
+BigInteger& BigInteger::operator=(const BigInteger& other) {
+  if (this != &other) {
+    digits_ = other.digits_;
+    is_negative_ = other.is_negative_;
+  }
+  return *this;
+}
+
+BigInteger& BigInteger::operator=(BigInteger&& other) noexcept {
+  if (this != &other) {
+    digits_ = std::move(other.digits_);
+    is_negative_ = other.is_negative_;
+    other.is_negative_ = false;
+  }
+  return *this;
 }
 
 BigInteger operator+(BigInteger lhs, const BigInteger& rhs) {
-    lhs += rhs;
-    return lhs;
+  return lhs += rhs;
 }
+
 BigInteger operator-(BigInteger lhs, const BigInteger& rhs) {
-    lhs -= rhs;
-    return lhs;
+  return lhs -= rhs;
 }
+
 BigInteger operator*(BigInteger lhs, const BigInteger& rhs) {
-    lhs *= rhs;
-    return lhs;
+  return lhs *= rhs;
 }
-BigInteger operator+(BigInteger lhs, int rhs) {
-    lhs += rhs;
-    return lhs;
+
+
+BigInteger& BigInteger::operator++() {
+  *this += BigInteger(1);
+  return *this;
 }
-BigInteger operator-(BigInteger lhs, int rhs) {
-    lhs -= rhs;
-    return lhs;
+
+BigInteger BigInteger::operator++(int) {
+  BigInteger temp(*this);
+  *this += BigInteger(1);
+  return temp;
 }
-BigInteger operator*(BigInteger lhs, int rhs) {
-    lhs *= rhs;
-    return lhs;
+
+BigInteger& BigInteger::operator--() {
+  *this -= BigInteger(1);
+  return *this;
+}
+
+BigInteger BigInteger::operator--(int) {
+  BigInteger temp(*this);
+  *this -= BigInteger(1);
+  return temp;
+}
+
+BigInteger::operator bool() const {
+  return !digits_.empty();
+}
+
+bool operator==(const BigInteger& lhs, const BigInteger& rhs) {
+  if (lhs.digits_.empty() && rhs.digits_.empty()) {
+    return true;
+  }
+  return lhs.is_negative_ == rhs.is_negative_ && lhs.digits_ == rhs.digits_;
+}
+
+bool operator!=(const BigInteger& lhs, const BigInteger& rhs) {
+  return !(lhs == rhs);
+}
+
+bool operator<(const BigInteger& lhs, const BigInteger& rhs) {
+  if (lhs.is_negative_ != rhs.is_negative_) {
+    return lhs.is_negative_;
+  }
+  if (lhs.digits_.size() != rhs.digits_.size()) {
+    return lhs.digits_.size() * (lhs.is_negative_ ? -1 : 1) < rhs.digits_.size() * (rhs.is_negative_ ? -1 : 1);
+  }
+  for (int i = static_cast<int>(lhs.digits_.size()) - 1; i >= 0; --i) {
+    if (lhs.digits_[i] != rhs.digits_[i]) {
+      return lhs.digits_[i] * (lhs.is_negative_ ? -1 : 1) < rhs.digits_[i] * (rhs.is_negative_ ? -1 : 1);
+    }
+  }
+  return false;
+}
+
+bool operator<=(const BigInteger& lhs, const BigInteger& rhs) {
+  return !(rhs < lhs);
+}
+
+bool operator>(const BigInteger& lhs, const BigInteger& rhs) {
+  return rhs < lhs;
+}
+
+bool operator>=(const BigInteger& lhs, const BigInteger& rhs) {
+  return !(lhs < rhs);
+}
+
+std::ostream& operator<<(std::ostream& os, const BigInteger& value) {
+  if (value.is_negative_) {
+    os << '-';
+  }
+  os << (value.digits_.empty() ? 0 : value.digits_.back());
+  for (int i = static_cast<int>(value.digits_.size()) - 2; i >= 0; --i) {
+    os << std::setw(BigInteger::kBaseDigits) << std::setfill('0') << value.digits_[i];
+  }
+  return os;
+}
+
+std::istream& operator>>(std::istream& is, BigInteger& value) {
+  std::string s;
+  is >> s;
+  value = BigInteger(s);
+  return is;
+}
+
+void BigInteger::Trim() {
+  while (!digits_.empty() && digits_.back() == 0) {
+    digits_.pop_back();
+  }
+  if (digits_.empty()) {
+    is_negative_ = false;
+  }
+}
+
+
+
+void BigInteger::FromString(const std::string& value) {
+  is_negative_ = false;
+  digits_.clear();
+  int pos = 0;
+  if (value[0] == '-') {
+    is_negative_ = true;
+    pos = 1;
+  } else if (value[0] == '+') {
+    pos = 1;
+  }
+  for (int i = static_cast<int>(value.size()) - 1; i >= pos; i -= kBaseDigits) {
+    int x = 0;
+    for (int j = std::max(pos, i - kBaseDigits + 1); j <= i; ++j) {
+      if (x > (std::numeric_limits<int>::max() - (value[j] - '0')) / 10) {
+        throw BigIntegerOverflow();
+      }
+      x = x * 10 + (value[j] - '0');
+    }
+    if (x < 0 || x >= kBASE) {
+      throw BigIntegerOverflow();
+    }
+    digits_.push_back(x);
+  }
+  Trim();
+}
+
+
+size_t BigInteger::DigitCount() const{
+  if (digits_.empty() || (digits_.size() == 1 && digits_[0] == 0)) {
+    return 1;
+  }
+  size_t digit_count = (digits_.size() - 1) * kBaseDigits;
+  int last_digit = digits_.back();
+  while (last_digit > 0) {
+    last_digit /= 10;
+    digit_count++;
+  }
+  return digit_count;
 }
