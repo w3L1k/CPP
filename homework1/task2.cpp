@@ -2,13 +2,13 @@
 #include <iostream>
 
 int main() {
-  int x = 0;
+  int йцу = 0;
   int y = 0;
   double z = 0.0;
 
-  std::cin >> x >> y;
+  std::cin >> йцу >> y;
 
-  z = std::sqrt(x * x + y * y);
+  z = std::sqrt(йцу * йцу + y * y);
 
   std::cout << z << std::endl;
   return 0;

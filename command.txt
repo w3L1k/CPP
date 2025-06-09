@@ -24,7 +24,7 @@ clang-tidy -fix taskJ.cpp
 
 git status
 git add .
-git commit -m "БДЗ Final"
+git commit -m "ЕДЗ 6"
 git push origin main
 
 
