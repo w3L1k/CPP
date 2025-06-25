@@ -1,9 +1,30 @@
-#include <iostream>
+#include <string>
+template <typename T>
+struct HasSerialize {
+  template <typename U>
 
-int main(void) {
-int x = 0;
-int a = x++;
-int b = ++x;
-std::cout << "x: " << x << ", a: " << a << ", b: " << b << std::endl;
-    return 0;
+  static auto test(int) -> std::is_same<
+      decltype(std::declval<const U>().serialize()),
+      std::string
+  >
+  template <typename U>
+  static std::false_type test(...);
+
+  static constexpr bool value = decltype(test<T>(0))::value;
+};
+
+class Data {
+ public:
+  std::string serialize() const {
+    return "";
+  };
+};
+template <typename T>
+void save(const T& obj) {
+  static_assert(HasSerialize<T>::value, "requires serialize method");
+  obj.serialize();
+}
+void demo() {
+  Data d;
+  save(d);
 }
